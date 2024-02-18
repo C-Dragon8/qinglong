@@ -29,6 +29,7 @@ import tar from 'tar';
 import path from 'path';
 import fs from 'fs';
 import sum from 'lodash/sum';
+import { DependenceModel, DependenceStatus, DependenceTypes } from '../data/dependence';
 
 @Service()
 export default class SystemService {
@@ -136,7 +137,13 @@ export default class SystemService {
     if (info.nodeMirror) {
       cmd = `pnpm config set registry ${info.nodeMirror}`;
     }
-    const command = `cd && ${cmd} && pnpm i -g`;
+    let command = `cd && ${cmd}`;
+    const docs = await DependenceModel.findAll({
+      where: { type: DependenceTypes.nodejs, status: DependenceStatus.installed },
+    });
+    if (docs.length > 0) {
+      command += ` && pnpm i -g`;
+    }
     this.scheduleService.runTask(
       command,
       {
@@ -177,7 +184,11 @@ export default class SystemService {
     return { code: 200, data: info };
   }
 
-  public async updateLinuxMirror(info: SystemModelInfo, res?: Response) {
+  public async updateLinuxMirror(
+    info: SystemModelInfo,
+    res?: Response,
+    onEnd?: () => void,
+  ) {
     const oDoc = await this.getSystemConfig();
     await this.updateAuthDb({
       ...oDoc,
@@ -185,8 +196,12 @@ export default class SystemService {
     });
     let defaultDomain = 'https://dl-cdn.alpinelinux.org';
     let targetDomain = 'https://dl-cdn.alpinelinux.org';
-    if (oDoc.info?.linuxMirror) {
-      defaultDomain = oDoc.info.linuxMirror;
+    const content = await fs.promises.readFile('/etc/apk/repositories', {
+      encoding: 'utf-8',
+    });
+    const domainMatch = content.match(/(http.*)\/alpine\/.*/);
+    if (domainMatch) {
+      defaultDomain = domainMatch[1];
     }
     if (info.linuxMirror) {
       targetDomain = info.linuxMirror;
@@ -211,6 +226,7 @@ export default class SystemService {
             type: 'updateLinuxMirror',
             message: 'update linux mirror end',
           });
+          onEnd?.();
         },
         onError: async (message: string) => {
           this.sockService.sendMessage({ type: 'updateLinuxMirror', message });
