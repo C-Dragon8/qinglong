@@ -360,6 +360,35 @@ export function parseHeaders(headers: string) {
   return parsed;
 }
 
+function parseString(
+  input: string,
+  valueFormatFn?: (v: string) => string,
+): Record<string, string> {
+  const regex = /(\w+):\s*((?:(?!\n\w+:).)*)/g;
+  const matches: Record<string, string> = {};
+
+  let match;
+  while ((match = regex.exec(input)) !== null) {
+    const [, key, value] = match;
+    const _key = key.trim();
+    if (!_key || matches[_key]) {
+      continue;
+    }
+
+    let _value = value.trim();
+
+    try {
+      _value = valueFormatFn ? valueFormatFn(_value) : _value;
+      const jsonValue = JSON.parse(_value);
+      matches[_key] = jsonValue;
+    } catch (error) {
+      matches[_key] = _value;
+    }
+  }
+
+  return matches;
+}
+
 export function parseBody(
   body: string,
   contentType:
@@ -367,33 +396,13 @@ export function parseBody(
     | 'multipart/form-data'
     | 'application/x-www-form-urlencoded'
     | 'text/plain',
+  valueFormatFn?: (v: string) => string,
 ) {
   if (contentType === 'text/plain' || !body) {
     return body;
   }
 
-  const parsed: any = {};
-  let key;
-  let val;
-  let i;
-
-  body &&
-    body.split('\n').forEach(function parser(line) {
-      i = line.indexOf(':');
-      key = line.substring(0, i).trim();
-      val = line.substring(i + 1).trim();
-
-      if (!key || parsed[key]) {
-        return;
-      }
-
-      try {
-        const jsonValue = JSON.parse(val);
-        parsed[key] = jsonValue;
-      } catch (error) {
-        parsed[key] = val;
-      }
-    });
+  const parsed = parseString(body, valueFormatFn);
 
   switch (contentType) {
     case 'multipart/form-data':
