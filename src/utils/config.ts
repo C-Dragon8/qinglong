@@ -190,6 +190,10 @@ export default {
         label: 'barkUrl',
         tip: intl.get('BARK推送消息的跳转URL'),
       },
+      {
+        label: 'barkArchive',
+        tip: intl.get('BARK是否保存推送消息'),
+      },
     ],
     telegramBot: [
       {
@@ -333,6 +337,11 @@ export default {
         label: 'pushMeKey',
         tip: intl.get('PushMe的Key，https://push.i-i.me/'),
         required: true,
+      },
+      {
+        label: 'pushMeUrl',
+        tip: intl.get('自建的PushMeServer消息接口地址，例如：http://127.0.0.1:3010，不填则使用官方消息接口'),
+        required: false,
       },
     ],
     chronocat: [

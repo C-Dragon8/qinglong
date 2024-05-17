@@ -196,8 +196,15 @@ export default class NotificationService {
   }
 
   private async bark() {
-    let { barkPush, barkIcon, barkSound, barkGroup, barkLevel, barkUrl } =
-      this.params;
+    let {
+      barkPush,
+      barkIcon = '',
+      barkSound = '',
+      barkGroup = '',
+      barkLevel = '',
+      barkUrl = '',
+      barkArchive = '',
+    } = this.params;
     if (!barkPush.startsWith('http')) {
       barkPush = `https://api.day.app/${barkPush}`;
     }
@@ -205,8 +212,7 @@ export default class NotificationService {
       this.title,
     )}/${encodeURIComponent(
       this.content,
-    )}?icon=${barkIcon}&sound=${barkSound}&group=${barkGroup}&level=${barkLevel}&url=${barkUrl}`;
-
+    )}?icon=${barkIcon}&sound=${barkSound}&group=${barkGroup}&level=${barkLevel}&url=${barkUrl}&isArchive=${barkArchive}`;
     try {
       const res: any = await got
         .get(url, {
@@ -567,13 +573,14 @@ export default class NotificationService {
   }
 
   private async pushMe() {
-    const { pushMeKey } = this.params;
+    const { pushMeKey, pushMeUrl } = this.params;
     try {
       const res: any = await got.post(
-        `https://push.i-i.me/?push_key=${pushMeKey}`,
+        pushMeUrl || 'https://push.i-i.me/',
         {
           ...this.gotOption,
           json: {
+            push_key: pushMeKey,
             title: this.title,
             content: this.content,
           },
